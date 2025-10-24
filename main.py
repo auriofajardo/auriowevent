@@ -49,3 +49,28 @@ async def jotform_webhook(request: Request):
     )
 
     return {"url": url}
+
+
+import os
+import requests
+
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+
+@app.post("/telegram")
+async def telegram_webhook(request: Request):
+    data = await request.json()
+
+    # Extraer chat_id y texto del mensaje
+    chat_id = data["message"]["chat"]["id"]
+    text = data["message"]["text"]
+
+    # Procesamiento clínico (puedes reemplazar esto con tu lógica)
+    reply = f"Recibido: {text}"
+
+    # Enviar respuesta por Telegram
+    requests.post(
+        f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+        data={"chat_id": chat_id, "text": reply}
+    )
+
+    return {"ok": True}

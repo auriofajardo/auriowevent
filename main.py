@@ -81,3 +81,49 @@ async def telegram_webhook(request: Request):
 
     del SESS[chat_id]
     return {"ok": True}
+
+
+from fastapi.responses import RedirectResponse
+
+@app.post("/webhook")
+async def jotform_webhook(request: Request):
+    data = await request.json()
+
+    # Extraer datos del formulario
+    Ppeak = float(data.get("Ppeak", 0))
+    PEEP = float(data.get("PEEP", 0))
+    PS = float(data.get("PS", 0))
+    Sat = float(data.get("Sat", 0))
+    FiO2 = float(data.get("FiO2", 0))
+    esfuerzos = list(map(float, data.get("esfuerzos", "0,0,0").split(",")))
+
+    epoc = data.get("tiene_epoc", "no").lower() == "si"
+    asma = data.get("tiene_asma", "no").lower() == "si"
+    hipercapnia = data.get("hipercapnia", "no").lower() == "si"
+    hemodinamica = data.get("alteracion_hemodinamica", "no").lower() == "si"
+    cambio_pH = data.get("cambio_pH", "no").lower() == "si"
+
+    datos = {
+        "Ppeak": Ppeak,
+        "PEEP": PEEP,
+        "PS": PS,
+        "Sat": Sat,
+        "FiO2": FiO2,
+        "tiene_epoc": epoc,
+        "tiene_asma": asma,
+        "hipercapnia": hipercapnia,
+        "alteracion_hemodinamica": hemodinamica,
+        "cambio_pH": cambio_pH
+    }
+
+    resultado = calcular_ajuste(datos, esfuerzos)
+
+    # Construir URL prellenada
+    url = (
+        f"https://form.jotform.com/252945029926062?"
+        f"PS={resultado['PS_sugerida']:.1f}"
+        f"&PEEP={resultado['PEEP_sugerida']:.1f}"
+        f"&FiO2={resultado['FiO2_sugerida']:.1f}"
+    )
+
+    return RedirectResponse(url)

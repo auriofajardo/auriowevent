@@ -146,7 +146,7 @@ async def jotform_webhook(request: Request):
     # Ejecutar cálculo clínico
     resultado = calcular_ajuste(datos, esfuerzos)
 
-    # Redirigir a página visual con resultados
+# Construir URL de resultados
     url = (
         f"https://webot-wh7l.onrender.com/resultados?"
         f"PS={resultado['PS_sugerida']:.1f}"
@@ -154,17 +154,10 @@ async def jotform_webhook(request: Request):
         f"&FiO2={resultado['FiO2_sugerida']:.1f}"
     )
 
-    html = f"""
-    <html>
-        <head>
-            <meta http-equiv="refresh" content="0; url={url}" />
-        </head>
-        <body>
-            <p>Redirigiendo a resultados clínicos...</p>
-        </body>
-    </html>
-    """
-    return HTMLResponse(content=html)
+# Devolver el link como campo para Jotform
+    return {"link_resultados": url}
+
+
 
 
 

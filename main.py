@@ -8,7 +8,7 @@ SESS = {}
 
 PROMPTS = [
     "🚀 Bienvenido al asistente ventilatorio.\nIngrese Ppeak (cmH2O):",
-    "👉 Ingrese PEEP inicial (cmH2O):",
+    "👉 Ingrese PEEP actual (cmH2O):",
     "👉 Ingrese PS actual (cmH2O):",
     "👉 Ingrese SatO2 (%):",
     "👉 Ingrese FiO2 actual (%):",
@@ -17,7 +17,9 @@ PROMPTS = [
     "👉 ¿Hipercapnia? (si/no):",
     "👉 ¿Alteración hemodinámica? (si/no):",
     "👉 ¿Cambios en pH? (si/no):",
-    "✏️ Ingrese 3 esfuerzos inspiratorios separados por coma:"
+    "✏️ Esfuerzo inspiratorio #1 (cmH₂O):",
+    "✏️ Esfuerzo inspiratorio #2 (cmH₂O):",
+    "✏️ Esfuerzo inspiratorio #3 (cmH₂O):"
 ]
 
 def send_message(chat_id, text):
@@ -49,11 +51,14 @@ async def telegram_webhook(request: Request):
             key = ["tiene_epoc", "tiene_asma", "hipercapnia",
                    "alteracion_hemodinamica", "cambio_pH"][step - 5]
             d[key] = text.lower() == "si"
-        elif step == 10:
-            esfuerzos = list(map(float, text.split(",")))
-            if len(esfuerzos) != 3:
-                raise ValueError("Se requieren exactamente 3 valores.")
-            d["esfuerzos"] = esfuerzos
+        elif 10 <= step <= 12:
+             esfuerzo = float(text)
+             if "esfuerzos" not in d:
+                 d["esfuerzos"] = []
+             d["esfuerzos"].append(esfuerzo)
+             send_message(chat_id, f"✅ Esfuerzo #{step - 9} registrado: {esfuerzo:.1f} cmH₂O")
+
+
         else:
             return {"ok": True}
     except ValueError as e:
@@ -65,6 +70,11 @@ async def telegram_webhook(request: Request):
     if sess["step"] < len(PROMPTS):
         send_message(chat_id, PROMPTS[sess["step"]])
         return {"ok": True}
+    
+    if len(d["esfuerzos"]) != 3:
+       send_message(chat_id, "⚠️ Se requieren exactamente 3 esfuerzos inspiratorios.")
+       return {"ok": True}
+
 
     res = calcular_ajuste(d, d["esfuerzos"])
 
@@ -95,7 +105,14 @@ async def jotform_webhook(request: Request):
     PS = float(data.get("PS", 0))
     Sat = float(data.get("Sat", 0))
     FiO2 = float(data.get("FiO2", 0))
-    esfuerzos = list(map(float, data.get("esfuerzos", "0,0,0").split(",")))
+    esfuerzo_str = data.get("esfuerzos", "")
+    try:
+        esfuerzos = list(map(float, esfuerzo_str.split(",")))
+        if len(esfuerzos) != 3:
+            raise ValueError("Se requieren 3 esfuerzos.")
+    except Exception as e:
+        return {"error": f"Error al procesar esfuerzos: {e}"}
+
 
     epoc = data.get("tiene_epoc", "no").lower() == "si"
     asma = data.get("tiene_asma", "no").lower() == "si"
@@ -127,3 +144,55 @@ async def jotform_webhook(request: Request):
     )
 
     return RedirectResponse(url)
+
+from fastapi.responses import HTMLResponse
+from fastapi import Query
+
+@app.get("/resultados")
+async def mostrar_resultados(
+    PS: float = Query(...),
+    PEEP: float = Query(...),
+    FiO2: float = Query(...)
+):
+    html_content = f"""
+    <html>
+        <head>
+            <title>Resultados Clínicos</title>
+            <meta charset="UTF-8">
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    background-color: #f0f4f8;
+                    padding: 2em;
+                    color: #333;
+                }}
+                .card {{
+                    background-color: white;
+                    padding: 2em;
+                    border-radius: 10px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                    max-width: 500px;
+                    margin: auto;
+                }}
+                h2 {{
+                    color: #007BFF;
+                    margin-bottom: 1em;
+                }}
+                p {{
+                    font-size: 1.1em;
+                    margin: 0.5em 0;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <h2>✅ Resultados Clínicos</h2>
+                <p><strong>PS sugerida:</strong> {PS:.1f} cmH₂O</p>
+                <p><strong>PEEP sugerida:</strong> {PEEP:.1f} cmH₂O</p>
+                <p><strong>FiO₂ sugerida:</strong> {FiO2:.1f}%</p>
+            </div>
+        </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
+

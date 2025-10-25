@@ -96,8 +96,8 @@ async def telegram_webhook(request: Request):
     return {"ok": True}
 
 
-from fastapi.responses import RedirectResponse
-from fastapi import Request
+from fastapi.responses import HTMLResponse
+from fastapi import Request, Query
 
 @app.post("/webhook")
 async def jotform_webhook(request: Request):
@@ -154,10 +154,21 @@ async def jotform_webhook(request: Request):
         f"&FiO2={resultado['FiO2_sugerida']:.1f}"
     )
 
-    return RedirectResponse(url)
+    html = f"""
+    <html>
+        <head>
+            <meta http-equiv="refresh" content="0; url={url}" />
+        </head>
+        <body>
+            <p>Redirigiendo a resultados clínicos...</p>
+        </body>
+    </html>
+    """
+    return HTMLResponse(content=html)
 
-from fastapi.responses import HTMLResponse
-from fastapi import Query
+
+
+
 
 @app.get("/resultados")
 async def mostrar_resultados(

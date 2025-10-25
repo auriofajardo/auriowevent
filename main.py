@@ -75,6 +75,9 @@ async def telegram_webhook(request: Request):
        send_message(chat_id, "⚠️ Se requieren exactamente 3 esfuerzos inspiratorios.")
        return {"ok": True}
 
+# Validación clínica opcional: esfuerzos fuera de rango
+    if any(abs(e) < -5 or e > 5 for e in d["esfuerzos"]):
+        send_message(chat_id, "⚠️ Alguno de los esfuerzos parece fuera de rango clínico (>20 cmH₂O). Verifica si hay error en la entrada.")
 
     res = calcular_ajuste(d, d["esfuerzos"])
 
@@ -94,6 +97,7 @@ async def telegram_webhook(request: Request):
 
 
 from fastapi.responses import RedirectResponse
+from fastapi import Request
 
 @app.post("/webhook")
 async def jotform_webhook(request: Request):
@@ -105,21 +109,27 @@ async def jotform_webhook(request: Request):
     PS = float(data.get("PS", 0))
     Sat = float(data.get("Sat", 0))
     FiO2 = float(data.get("FiO2", 0))
-    esfuerzo_str = data.get("esfuerzos", "")
+
+    # Capturar esfuerzos inspiratorios desde tres campos separados
     try:
-        esfuerzos = list(map(float, esfuerzo_str.split(",")))
+        esfuerzos = [
+            float(data.get("esfuerzo1", 0)),
+            float(data.get("esfuerzo2", 0)),
+            float(data.get("esfuerzo3", 0))
+        ]
         if len(esfuerzos) != 3:
             raise ValueError("Se requieren 3 esfuerzos.")
     except Exception as e:
         return {"error": f"Error al procesar esfuerzos: {e}"}
 
-
+    # Capturar comorbilidades y condiciones clínicas
     epoc = data.get("tiene_epoc", "no").lower() == "si"
     asma = data.get("tiene_asma", "no").lower() == "si"
     hipercapnia = data.get("hipercapnia", "no").lower() == "si"
     hemodinamica = data.get("alteracion_hemodinamica", "no").lower() == "si"
     cambio_pH = data.get("cambio_pH", "no").lower() == "si"
 
+    # Construir diccionario clínico
     datos = {
         "Ppeak": Ppeak,
         "PEEP": PEEP,
@@ -133,11 +143,12 @@ async def jotform_webhook(request: Request):
         "cambio_pH": cambio_pH
     }
 
+    # Ejecutar cálculo clínico
     resultado = calcular_ajuste(datos, esfuerzos)
 
-    # Construir URL prellenada
+    # Redirigir a página visual con resultados
     url = (
-        f"https://form.jotform.com/252945029926062?"
+        f"https://webot-wh7l.onrender.com/resultados?"
         f"PS={resultado['PS_sugerida']:.1f}"
         f"&PEEP={resultado['PEEP_sugerida']:.1f}"
         f"&FiO2={resultado['FiO2_sugerida']:.1f}"

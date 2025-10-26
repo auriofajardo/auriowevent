@@ -76,7 +76,7 @@ async def telegram_webhook(request: Request):
        return {"ok": True}
 
 # Validación clínica opcional: esfuerzos fuera de rango
-    if any(abs(e) < -5 or e > 5 for e in d["esfuerzos"]):
+    if any(e < -5 or e > 5 for e in d["esfuerzos"]):
         send_message(chat_id, "⚠️ Alguno de los esfuerzos parece fuera de rango clínico (< -5 o > 5 cmH₂O). Verifica si hay error en la entrada.")
 
     res = calcular_ajuste(d, d["esfuerzos"])
@@ -86,10 +86,11 @@ async def telegram_webhook(request: Request):
 
     summary = (
         f"\n✅ RESULTADOS FINALES:\n"
-        f"• PS final       = {res['PS_final']:.1f} cmH2O\n"
-        f"• PEEP final     = {res['PEEP_final']:.1f} cmH2O\n"
-        f"• FiO2 sugerida  = {res['FiO2_sugerida']:.1f}%"
+        f"• PS sugerida   = {res['PS_final']:.1f} cmH₂O\n"
+        f"• PEEP sugerida  = {res['PEEP_final']:.1f} cmH₂O\n"
+        f"• FiO₂ sugerida  = {res['FiO2_sugerida']:.1f}%"
     )
+
     send_message(chat_id, summary)
 
     del SESS[chat_id]

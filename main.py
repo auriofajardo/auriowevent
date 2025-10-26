@@ -77,7 +77,7 @@ async def telegram_webhook(request: Request):
 
 # Validación clínica opcional: esfuerzos fuera de rango
     if any(abs(e) < -5 or e > 5 for e in d["esfuerzos"]):
-        send_message(chat_id, "⚠️ Alguno de los esfuerzos parece fuera de rango clínico (>20 cmH₂O). Verifica si hay error en la entrada.")
+        send_message(chat_id, "⚠️ Alguno de los esfuerzos parece fuera de rango clínico (< -5 o > 5 cmH₂O). Verifica si hay error en la entrada.")
 
     res = calcular_ajuste(d, d["esfuerzos"])
 
@@ -146,7 +146,7 @@ async def jotform_webhook(request: Request):
     # Ejecutar cálculo clínico
     resultado = calcular_ajuste(datos, esfuerzos)
 
-# Construir URL de resultados
+    # Construir URL de resultados
     url = (
         f"https://webot-wh7l.onrender.com/resultados?"
         f"PS={resultado['PS_sugerida']:.1f}"
@@ -154,7 +154,7 @@ async def jotform_webhook(request: Request):
         f"&FiO2={resultado['FiO2_sugerida']:.1f}"
     )
 
-# Devolver el link como campo para Jotform
+    # Devolver el link como campo para Jotform
     return {"link_resultados": url}
 
 
@@ -211,3 +211,7 @@ async def mostrar_resultados(
     """
     return HTMLResponse(content=html_content)
 
+
+@app.get("/")
+async def root():
+    return {"mensaje": "✅ Webot activo. Usa /webhook para enviar datos o /resultados para ver ajustes."}

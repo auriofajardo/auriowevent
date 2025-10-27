@@ -7,20 +7,19 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 SESS = {}
 
 PROMPTS = [
-    "🚀 Bienvenido al asistente ventilatorio.\n",
     "👉 Ingrese Ppeak (cmH2O):",
-    "👉 Ingrese PEEP actual (cmH₂O):",
-    "👉 Ingrese PS actual (cmH₂O):",
-    "👉 Ingrese SatO₂ (%):",
-    "👉 Ingrese FiO₂ actual (%):",
+    "👉 Ingrese PEEP inicial (cmH2O):",
+    "👉 Ingrese PS actual (cmH2O):",
+    "👉 Ingrese SatO2 (%):",
+    "👉 Ingrese FiO2 actual (%):",
     "👉 ¿EPOC? (si/no):",
     "👉 ¿Asma? (si/no):",
     "👉 ¿Hipercapnia? (si/no):",
     "👉 ¿Alteración hemodinámica? (si/no):",
     "👉 ¿Cambios en pH? (si/no):",
-    "✏️ Esfuerzo inspiratorio #1 (cmH₂O):",
-    "✏️ Esfuerzo inspiratorio #2 (cmH₂O):",
-    "✏️ Esfuerzo inspiratorio #3 (cmH₂O):"
+    "✏️ Ingrese esfuerzo inspiratorio #1 (cmH2O):",
+    "✏️ Ingrese esfuerzo inspiratorio #2 (cmH2O):",
+    "✏️ Ingrese esfuerzo inspiratorio #3 (cmH2O):"
 ]
 
 def send_message(chat_id, text):
@@ -35,11 +34,19 @@ async def telegram_webhook(request: Request):
     chat_id = data["message"]["chat"]["id"]
     text = data["message"]["text"].strip()
 
-    # iniciar sesión si es nuevo usuario
+    # 🔁 Opción de reinicio manual
+    if text.lower() in ["reiniciar", "/start", "reset"]:
+        SESS[chat_id] = {"step": 0, "data": {}}
+        send_message(chat_id, "🔄 Sesión reiniciada.")
+        send_message(chat_id, "🚀 Bienvenido al asistente ventilatorio.")
+        send_message(chat_id, PROMPTS[0])
+        return {"ok": True}
+
+    # 🧭 Iniciar sesión si es nuevo usuario
     if chat_id not in SESS:
-        SESS[chat_id] = {"step": 1, "data": {}}
-        send_message(chat_id, PROMPTS[0])  # Bienvenida
-        send_message(chat_id, PROMPTS[1])  # Primer dato clínico: Ppeak
+        SESS[chat_id] = {"step": 0, "data": {}}
+        send_message(chat_id, "🚀 Bienvenido al asistente ventilatorio.")
+        send_message(chat_id, PROMPTS[0])
         return {"ok": True}
 
     sess = SESS[chat_id]
@@ -47,88 +54,60 @@ async def telegram_webhook(request: Request):
     d = sess["data"]
 
     try:
-        # pasos 1-5: entradas numéricas
-        if 1 <= step <= 5:
-            key = ["Ppeak", "PEEP", "PS", "SatO2", "FiO2"][step - 1]
+        if step < 5:
+            key = ["Ppeak", "PEEP", "PS", "Sat", "FiO2"][step]
             d[key] = float(text)
 
-        # pasos 6-10: preguntas si/no
-        elif 6 <= step <= 10:
+        elif step < 10:
             key = ["tiene_epoc", "tiene_asma", "hipercapnia",
-                   "alteracion_hemodinamica", "cambio_pH"][step - 6]
-            if text.lower() not in ["si", "no"]:
-                send_message(chat_id, f"⚠️ Respuesta inválida. Por favor escribe 'si' o 'no'.\n{PROMPTS[step]}")
-                return {"ok": True}
+                   "alteracion_hemodinamica", "cambio_pH"][step - 5]
             d[key] = text.lower() == "si"
 
-        # pasos 11-13: esfuerzos inspiratorios
-        elif 11 <= step <= 13:
+        elif 10 <= step <= 12:
             try:
                 esfuerzo = float(text)
             except ValueError:
-                send_message(chat_id, f"⚠️ Entrada inválida. Por favor ingresa un número.\n{PROMPTS[step]}")
-                return {"ok": True}
+                raise ValueError("Por favor ingrese un número válido.")
 
             if esfuerzo < -5 or esfuerzo > 5:
-                send_message(chat_id, f"⚠️ Esfuerzo #{len(d.get('esfuerzos', [])) + 1} fuera de rango clínico (< -5 o > 5 cmH₂O). Intenta nuevamente.\n{PROMPTS[step]}")
-                return {"ok": True}
+                raise ValueError(f"Esfuerzo fuera de rango clínico (-5 a +5 cmH₂O).")
 
             if "esfuerzos" not in d:
                 d["esfuerzos"] = []
             d["esfuerzos"].append(esfuerzo)
-            send_message(chat_id, f"✅ Esfuerzo #{len(d['esfuerzos'])} registrado: {esfuerzo:.1f} cmH₂O")
 
-            # Si se ingresó el tercer esfuerzo, ejecutar cálculo y terminar sesión
-            if step == 13:
-                if len(d["esfuerzos"]) != 3:
-                    send_message(chat_id, "⚠️ Se requieren exactamente 3 esfuerzos inspiratorios.")
-                    return {"ok": True}
-
-                res = calcular_ajuste(d, d["esfuerzos"])
-
-                for log in res.get("logs", []):
-                    send_message(chat_id, log)
-
-                summary = (
-                    f"\n✅ RESULTADOS FINALES:\n"
-                    f"• PS sugerida   = {res['PS_sugerida']:.1f} cmH₂O\n"
-                    f"• PEEP sugerida  = {res['PEEP_sugerida']:.1f} cmH₂O\n"
-                    f"• FiO₂ sugerida  = {res['FiO₂_sugerida']:.1f}%"
-                )
-
-                send_message(chat_id, summary)
-                # finalizar sesión
-                del SESS[chat_id]
-                return {"ok": True}
+            send_message(chat_id, f"✅ Esfuerzo #{step - 9} registrado: {esfuerzo:.1f} cmH₂O")
 
         else:
-            # paso no esperado: reiniciar sesión para evitar bloqueo
-            send_message(chat_id, "⚠️ Estado de sesión inválido. Reiniciando sesión.")
-            if chat_id in SESS:
-                del SESS[chat_id]
-            # iniciar de nuevo
-            SESS[chat_id] = {"step": 1, "data": {}}
-            send_message(chat_id, PROMPTS[0])
-            send_message(chat_id, PROMPTS[1])
             return {"ok": True}
 
     except ValueError as e:
         send_message(chat_id, f"⚠️ Entrada inválida ({e}).\n{PROMPTS[step]}")
         return {"ok": True}
 
-    # avanzar paso solo si no se terminó en el bloque anterior
     sess["step"] += 1
 
-    # enviar siguiente prompt si existe
-    if sess["step"] <= 13:
-        send_message(chat_id, PROMPTS[sess["step"]])
+    # 🧮 Ejecutar cálculo tras esfuerzo #3
+    if sess["step"] == len(PROMPTS):
+        res = calcular_ajuste(d, d["esfuerzos"])
+
+        for log in res["logs"]:
+            send_message(chat_id, log)
+
+        summary = (
+            f"\n✅ RESULTADOS FINALES:\n"
+            f"• PS final       = {res['PS_final']:.1f} cmH2O\n"
+            f"• PEEP final     = {res['PEEP_final']:.1f} cmH2O\n"
+            f"• FiO2 sugerida  = {res['FiO2_sugerida']:.1f}%"
+        )
+        send_message(chat_id, summary)
+        del SESS[chat_id]
         return {"ok": True}
 
-    # Si se alcanzó aquí sin calcular (estado inesperado), reiniciar sesión para seguridad
-    send_message(chat_id, "⚠️ Ocurrió un error inesperado. Reiniciando sesión.")
-    if chat_id in SESS:
-        del SESS[chat_id]
+    # ➡️ Enviar siguiente prompt
+    send_message(chat_id, PROMPTS[sess["step"]])
     return {"ok": True}
+
 
 
 

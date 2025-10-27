@@ -47,7 +47,7 @@ async def telegram_webhook(request: Request):
     d = sess["data"]
 
     try:
-        if step < 5:
+        if step <= 5:
             key = ["Ppeak", "PEEP", "PS", "SatO2", "FiO2"][step - 1]
             d[key] = float(text)
         elif 6 <= step <= 10:

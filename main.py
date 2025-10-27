@@ -7,11 +7,12 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 SESS = {}
 
 PROMPTS = [
-    "🚀 Bienvenido al asistente ventilatorio.\nIngrese Ppeak (cmH2O):",
-    "👉 Ingrese PEEP actual (cmH2O):",
-    "👉 Ingrese PS actual (cmH2O):",
-    "👉 Ingrese SatO2 (%):",
-    "👉 Ingrese FiO2 actual (%):",
+    "🚀 Bienvenido al asistente ventilatorio.\n",
+    "👉 Ingrese Ppeak (cmH2O):",
+    "👉 Ingrese PEEP actual (cmH₂O):",
+    "👉 Ingrese PS actual (cmH₂O):",
+    "👉 Ingrese SatO₂ (%):",
+    "👉 Ingrese FiO₂ actual (%):",
     "👉 ¿EPOC? (si/no):",
     "👉 ¿Asma? (si/no):",
     "👉 ¿Hipercapnia? (si/no):",
@@ -35,7 +36,7 @@ async def telegram_webhook(request: Request):
     text = data["message"]["text"].strip()
 
     if chat_id not in SESS:
-        SESS[chat_id] = {"step": 0, "data": {}}
+        SESS[chat_id] = {"step": 1, "data": {}}
         send_message(chat_id, PROMPTS[0])
         return {"ok": True}
 
@@ -45,7 +46,7 @@ async def telegram_webhook(request: Request):
 
     try:
         if step < 5:
-            key = ["Ppeak", "PEEP", "PS", "Sat", "FiO2"][step]
+            key = ["Ppeak", "PEEP", "PS", "SatO2", "FiO2"][step]
             d[key] = float(text)
         elif step < 10:
             key = ["tiene_epoc", "tiene_asma", "hipercapnia",
@@ -110,7 +111,7 @@ async def jotform_webhook(request: Request):
     Ppeak = float(data.get("Ppeak", 0))
     PEEP = float(data.get("PEEP", 0))
     PS = float(data.get("PS", 0))
-    Sat = float(data.get("Sat", 0))
+    SatO2 = float(data.get("SatO2", 0))
     FiO2 = float(data.get("FiO2", 0))
 
     # Capturar esfuerzos inspiratorios desde tres campos separados
@@ -137,7 +138,7 @@ async def jotform_webhook(request: Request):
         "Ppeak": Ppeak,
         "PEEP": PEEP,
         "PS": PS,
-        "Sat": Sat,
+        "SatO2": SatO2,
         "FiO2": FiO2,
         "tiene_epoc": epoc,
         "tiene_asma": asma,

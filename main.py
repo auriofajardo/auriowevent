@@ -48,16 +48,16 @@ async def telegram_webhook(request: Request):
 
     try:
         if step < 5:
-            key = ["Ppeak", "PEEP", "PS", "SatO2", "FiO2"][step]
+            key = ["Ppeak", "PEEP", "PS", "SatO2", "FiO2"][step - 1]
             d[key] = float(text)
-        elif step <= 10:
+        elif 6 <= step <= 10:
             key = ["tiene_epoc", "tiene_asma", "hipercapnia",
-                   "alteracion_hemodinamica", "cambio_pH"][step - 5]
+                   "alteracion_hemodinamica", "cambio_pH"][step - 6]
             if text.lower() not in ["si", "no"]:
                 send_message(chat_id, f"⚠️ Respuesta inválida. Por favor escribe 'si' o 'no'.\n{PROMPTS[step]}")
                 return {"ok": True}
             d[key] = text.lower() == "si"
-        elif 10 <= step <= 12:
+        elif 11 <= step <= 13:
             try:
                 esfuerzo = float(text)
                 if esfuerzo < -5 or esfuerzo > 5:

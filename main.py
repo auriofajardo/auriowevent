@@ -35,21 +35,24 @@ async def telegram_webhook(request: Request):
     chat_id = data["message"]["chat"]["id"]
     text = data["message"]["text"].strip()
 
+    # iniciar sesión si es nuevo usuario
     if chat_id not in SESS:
         SESS[chat_id] = {"step": 1, "data": {}}
         send_message(chat_id, PROMPTS[0])  # Bienvenida
         send_message(chat_id, PROMPTS[1])  # Primer dato clínico: Ppeak
         return {"ok": True}
 
-
     sess = SESS[chat_id]
     step = sess["step"]
     d = sess["data"]
 
     try:
-        if step <= 5:
+        # pasos 1-5: entradas numéricas
+        if 1 <= step <= 5:
             key = ["Ppeak", "PEEP", "PS", "SatO2", "FiO2"][step - 1]
             d[key] = float(text)
+
+        # pasos 6-10: preguntas si/no
         elif 6 <= step <= 10:
             key = ["tiene_epoc", "tiene_asma", "hipercapnia",
                    "alteracion_hemodinamica", "cambio_pH"][step - 6]
@@ -57,14 +60,17 @@ async def telegram_webhook(request: Request):
                 send_message(chat_id, f"⚠️ Respuesta inválida. Por favor escribe 'si' o 'no'.\n{PROMPTS[step]}")
                 return {"ok": True}
             d[key] = text.lower() == "si"
+
+        # pasos 11-13: esfuerzos inspiratorios
         elif 11 <= step <= 13:
             try:
                 esfuerzo = float(text)
-                if esfuerzo < -5 or esfuerzo > 5:
-                    send_message(chat_id, f"⚠️ Esfuerzo #{step - 9} fuera de rango clínico (< -5 o > 5 cmH₂O). Intenta nuevamente.\n{PROMPTS[step]}")
-                    return {"ok": True}
             except ValueError:
                 send_message(chat_id, f"⚠️ Entrada inválida. Por favor ingresa un número.\n{PROMPTS[step]}")
+                return {"ok": True}
+
+            if esfuerzo < -5 or esfuerzo > 5:
+                send_message(chat_id, f"⚠️ Esfuerzo #{len(d.get('esfuerzos', [])) + 1} fuera de rango clínico (< -5 o > 5 cmH₂O). Intenta nuevamente.\n{PROMPTS[step]}")
                 return {"ok": True}
 
             if "esfuerzos" not in d:
@@ -72,40 +78,58 @@ async def telegram_webhook(request: Request):
             d["esfuerzos"].append(esfuerzo)
             send_message(chat_id, f"✅ Esfuerzo #{len(d['esfuerzos'])} registrado: {esfuerzo:.1f} cmH₂O")
 
+            # Si se ingresó el tercer esfuerzo, ejecutar cálculo y terminar sesión
+            if step == 13:
+                if len(d["esfuerzos"]) != 3:
+                    send_message(chat_id, "⚠️ Se requieren exactamente 3 esfuerzos inspiratorios.")
+                    return {"ok": True}
 
+                res = calcular_ajuste(d, d["esfuerzos"])
+
+                for log in res.get("logs", []):
+                    send_message(chat_id, log)
+
+                summary = (
+                    f"\n✅ RESULTADOS FINALES:\n"
+                    f"• PS sugerida   = {res['PS_sugerida']:.1f} cmH₂O\n"
+                    f"• PEEP sugerida  = {res['PEEP_sugerida']:.1f} cmH₂O\n"
+                    f"• FiO₂ sugerida  = {res['FiO₂_sugerida']:.1f}%"
+                )
+
+                send_message(chat_id, summary)
+                # finalizar sesión
+                del SESS[chat_id]
+                return {"ok": True}
 
         else:
+            # paso no esperado: reiniciar sesión para evitar bloqueo
+            send_message(chat_id, "⚠️ Estado de sesión inválido. Reiniciando sesión.")
+            if chat_id in SESS:
+                del SESS[chat_id]
+            # iniciar de nuevo
+            SESS[chat_id] = {"step": 1, "data": {}}
+            send_message(chat_id, PROMPTS[0])
+            send_message(chat_id, PROMPTS[1])
             return {"ok": True}
+
     except ValueError as e:
         send_message(chat_id, f"⚠️ Entrada inválida ({e}).\n{PROMPTS[step]}")
         return {"ok": True}
 
+    # avanzar paso solo si no se terminó en el bloque anterior
     sess["step"] += 1
 
+    # enviar siguiente prompt si existe
     if sess["step"] <= 13:
         send_message(chat_id, PROMPTS[sess["step"]])
         return {"ok": True}
-    
-    if len(d["esfuerzos"]) != 3:
-       send_message(chat_id, "⚠️ Se requieren exactamente 3 esfuerzos inspiratorios.")
-       return {"ok": True}
 
-    res = calcular_ajuste(d, d["esfuerzos"])
-
-    for log in res["logs"]:
-        send_message(chat_id, log)
-
-    summary = (
-        f"\n✅ RESULTADOS FINALES:\n"
-        f"• PS sugerida   = {res['PS_sugerida']:.1f} cmH₂O\n"
-        f"• PEEP sugerida  = {res['PEEP_sugerida']:.1f} cmH₂O\n"
-        f"• FiO₂ sugerida  = {res['FiO₂_sugerida']:.1f}%"
-    )
-
-    send_message(chat_id, summary)
-
-    del SESS[chat_id]
+    # Si se alcanzó aquí sin calcular (estado inesperado), reiniciar sesión para seguridad
+    send_message(chat_id, "⚠️ Ocurrió un error inesperado. Reiniciando sesión.")
+    if chat_id in SESS:
+        del SESS[chat_id]
     return {"ok": True}
+
 
 
 

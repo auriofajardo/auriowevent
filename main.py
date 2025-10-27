@@ -102,7 +102,9 @@ from fastapi import Request, Query
 
 @app.post("/webhook")
 async def jotform_webhook(request: Request):
-    data = await request.json()
+    form = await request.form()
+    data = dict(form)
+
 
     # Extraer datos del formulario
     Ppeak = float(data.get("Ppeak", 0))

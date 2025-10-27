@@ -2,5 +2,7 @@ fastapi
 uvicorn
 requests
 numpy
+python-multipart
+
 
 

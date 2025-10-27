@@ -86,9 +86,9 @@ async def telegram_webhook(request: Request):
 
     summary = (
         f"\n✅ RESULTADOS FINALES:\n"
-        f"• PS sugerida   = {res['PS_final']:.1f} cmH₂O\n"
-        f"• PEEP sugerida  = {res['PEEP_final']:.1f} cmH₂O\n"
-        f"• FiO₂ sugerida  = {res['FiO2_sugerida']:.1f}%"
+        f"• PS sugerida   = {res['PS_sugerida']:.1f} cmH₂O\n"
+        f"• PEEP sugerida  = {res['PEEP_sugerida']:.1f} cmH₂O\n"
+        f"• FiO₂ sugerida  = {res['FiO₂_sugerida']:.1f}%"
     )
 
     send_message(chat_id, summary)

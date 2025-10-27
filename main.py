@@ -70,7 +70,8 @@ async def telegram_webhook(request: Request):
             if "esfuerzos" not in d:
                 d["esfuerzos"] = []
             d["esfuerzos"].append(esfuerzo)
-            send_message(chat_id, f"✅ Esfuerzo #{step - 9} registrado: {esfuerzo:.1f} cmH₂O")
+            send_message(chat_id, f"✅ Esfuerzo #{len(d['esfuerzos'])} registrado: {esfuerzo:.1f} cmH₂O")
+
 
 
         else:
@@ -81,7 +82,7 @@ async def telegram_webhook(request: Request):
 
     sess["step"] += 1
 
-    if sess["step"] < len(PROMPTS):
+    if sess["step"] <= 13:
         send_message(chat_id, PROMPTS[sess["step"]])
         return {"ok": True}
     

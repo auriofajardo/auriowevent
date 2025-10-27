@@ -37,8 +37,10 @@ async def telegram_webhook(request: Request):
 
     if chat_id not in SESS:
         SESS[chat_id] = {"step": 1, "data": {}}
-        send_message(chat_id, PROMPTS[0])
+        send_message(chat_id, PROMPTS[0])  # Bienvenida
+        send_message(chat_id, PROMPTS[1])  # Primer dato clínico: Ppeak
         return {"ok": True}
+
 
     sess = SESS[chat_id]
     step = sess["step"]
@@ -48,16 +50,27 @@ async def telegram_webhook(request: Request):
         if step < 5:
             key = ["Ppeak", "PEEP", "PS", "SatO2", "FiO2"][step]
             d[key] = float(text)
-        elif step < 10:
+        elif step <= 10:
             key = ["tiene_epoc", "tiene_asma", "hipercapnia",
                    "alteracion_hemodinamica", "cambio_pH"][step - 5]
+            if text.lower() not in ["si", "no"]:
+                send_message(chat_id, f"⚠️ Respuesta inválida. Por favor escribe 'si' o 'no'.\n{PROMPTS[step]}")
+                return {"ok": True}
             d[key] = text.lower() == "si"
         elif 10 <= step <= 12:
-             esfuerzo = float(text)
-             if "esfuerzos" not in d:
-                 d["esfuerzos"] = []
-             d["esfuerzos"].append(esfuerzo)
-             send_message(chat_id, f"✅ Esfuerzo #{step - 9} registrado: {esfuerzo:.1f} cmH₂O")
+            try:
+                esfuerzo = float(text)
+                if esfuerzo < -5 or esfuerzo > 5:
+                    send_message(chat_id, f"⚠️ Esfuerzo #{step - 9} fuera de rango clínico (< -5 o > 5 cmH₂O). Intenta nuevamente.\n{PROMPTS[step]}")
+                    return {"ok": True}
+            except ValueError:
+                send_message(chat_id, f"⚠️ Entrada inválida. Por favor ingresa un número.\n{PROMPTS[step]}")
+                return {"ok": True}
+
+            if "esfuerzos" not in d:
+                d["esfuerzos"] = []
+            d["esfuerzos"].append(esfuerzo)
+            send_message(chat_id, f"✅ Esfuerzo #{step - 9} registrado: {esfuerzo:.1f} cmH₂O")
 
 
         else:
@@ -76,10 +89,6 @@ async def telegram_webhook(request: Request):
        send_message(chat_id, "⚠️ Se requieren exactamente 3 esfuerzos inspiratorios.")
        return {"ok": True}
 
-# Validación clínica opcional: esfuerzos fuera de rango
-    if any(e < -5 or e > 5 for e in d["esfuerzos"]):
-        send_message(chat_id, "⚠️ Alguno de los esfuerzos parece fuera de rango clínico (< -5 o > 5 cmH₂O). Verifica si hay error en la entrada.")
-
     res = calcular_ajuste(d, d["esfuerzos"])
 
     for log in res["logs"]:
@@ -96,6 +105,7 @@ async def telegram_webhook(request: Request):
 
     del SESS[chat_id]
     return {"ok": True}
+
 
 
 from fastapi.responses import HTMLResponse

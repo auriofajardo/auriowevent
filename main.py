@@ -8,7 +8,7 @@ SESS = {}
 
 PROMPTS = [
     "👉 Ingrese Ppeak (cmH2O):",
-    "👉 Ingrese PEEP inicial (cmH2O):",
+    "👉 Ingrese PEEP actual (cmH2O):",
     "👉 Ingrese PS actual (cmH2O):",
     "👉 Ingrese SatO2 (%):",
     "👉 Ingrese FiO2 actual (%):",
@@ -95,10 +95,10 @@ async def telegram_webhook(request: Request):
             send_message(chat_id, log)
 
         summary = (
-            f"\n✅ RESULTADOS FINALES:\n"
-            f"• PS final       = {res['PS_final']:.1f} cmH2O\n"
-            f"• PEEP final     = {res['PEEP_final']:.1f} cmH2O\n"
-            f"• FiO2 sugerida  = {res['FiO2_sugerida']:.1f}%"
+            f"\n✅ PROGRAMACIÓN SUGERIDA:\n"
+            f"• PS        = {res['PS_final']:.1f} cmH2O\n"
+            f"• PEEP      = {res['PEEP_final']:.1f} cmH2O\n"
+            f"• FiO2      = {res['FiO2_sugerida']:.1f}%"
         )
         send_message(chat_id, summary)
         del SESS[chat_id]

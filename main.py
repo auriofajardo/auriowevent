@@ -133,12 +133,17 @@ def formulario_html():
                     color: #333;
                 }
                 .form-card {
-                    background-color: white;
+                    background-color: rgba(173,243,228,0.42);
                     padding: 2em;
                     border-radius: 10px;
                     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
                     max-width: 600px;
                     margin: auto;
+                    animation: fadeIn 0.8s ease-in;
+                }
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(20px); }
+                    to { opacity: 1; transform: translateY(0); }
                 }
                 h2 {
                     color: #007BFF;
@@ -155,6 +160,11 @@ def formulario_html():
                     margin-top: 0.3em;
                     border: 1px solid #ccc;
                     border-radius: 5px;
+                    transition: box-shadow 0.3s ease;
+                }
+                input:focus, select:focus {
+                    outline: none;
+                    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
                 }
                 button {
                     margin-top: 2em;
@@ -164,9 +174,11 @@ def formulario_html():
                     border: none;
                     border-radius: 5px;
                     cursor: pointer;
+                    transition: transform 0.2s ease;
                 }
                 button:hover {
                     background-color: #0056b3;
+                    transform: scale(1.03);
                 }
             </style>
             <script>
@@ -187,19 +199,65 @@ def formulario_html():
             <div class="form-card">
                 <h2>🩺 Ingreso de Datos Clínicos</h2>
                 <form action="/procesar" method="post">
-                    <label>Ppeak:</label><input type="number" name="Ppeak" step="0.1" required>
-                    <label>PEEP:</label><input type="number" name="PEEP" step="0.1" required>
-                    <label>PS:</label><input type="number" name="PS" step="0.1" required>
-                    <label>SatO2:</label><input type="number" name="SatO2" step="0.1" required>
-                    <label>FiO2:</label><input type="number" name="FiO2" step="0.1" required>
-                    <label>EPOC:</label><select name="tiene_epoc"><option>si</option><option>no</option></select>
-                    <label>Asma:</label><select name="tiene_asma"><option>si</option><option>no</option></select>
-                    <label>Hipercapnia:</label><select name="hipercapnia"><option>si</option><option>no</option></select>
-                    <label>Hemodinámica:</label><select name="alteracion_hemodinamica"><option>si</option><option>no</option></select>
-                    <label>Cambio pH:</label><select name="cambio_pH"><option>si</option><option>no</option></select>
-                    <label>Esfuerzo 1:</label><input type="number" name="esfuerzo1" id="esfuerzo1" step="0.1" required oninput="validarEsfuerzo('esfuerzo1')">
-                    <label>Esfuerzo 2:</label><input type="number" name="esfuerzo2" id="esfuerzo2" step="0.1" required oninput="validarEsfuerzo('esfuerzo2')">
-                    <label>Esfuerzo 3:</label><input type="number" name="esfuerzo3" id="esfuerzo3" step="0.1" required oninput="validarEsfuerzo('esfuerzo3')">
+                    <label>👉 Ingrese Ppeak (cmH₂O):</label>
+                    <input type="number" name="Ppeak" step="0.1" required>
+
+                    <label>👉 Ingrese PEEP actual (cmH₂O):</label>
+                    <input type="number" name="PEEP" step="0.1" required>
+
+                    <label>👉 Ingrese PS actual (cmH₂O):</label>
+                    <input type="number" name="PS" step="0.1" required>
+
+                    <label>👉 Ingrese SatO₂ (%):</label>
+                    <input type="number" name="SatO2" step="0.1" required>
+
+                    <label>👉 Ingrese FiO₂ actual (%):</label>
+                    <input type="number" name="FiO2" step="0.1" required>
+
+                    <label>👉 ¿EPOC?</label>
+                    <select name="tiene_epoc" required>
+                        <option value="" disabled selected>Seleccione una opción</option>
+                        <option value="si">si</option>
+                        <option value="no">no</option>
+                    </select>
+
+                    <label>👉 ¿Asma?</label>
+                    <select name="tiene_asma" required>
+                        <option value="" disabled selected>Seleccione una opción</option>
+                        <option value="si">si</option>
+                        <option value="no">no</option>
+                    </select>
+
+                    <label>👉 ¿Hipercapnia?</label>
+                    <select name="hipercapnia" required>
+                        <option value="" disabled selected>Seleccione una opción</option>
+                        <option value="si">si</option>
+                        <option value="no">no</option>
+                    </select>
+
+                    <label>👉 ¿Alteración hemodinámica?</label>
+                    <select name="alteracion_hemodinamica" required>
+                        <option value="" disabled selected>Seleccione una opción</option>
+                        <option value="si">si</option>
+                        <option value="no">no</option>
+                    </select>
+
+                    <label>👉 ¿Cambios en pH?</label>
+                    <select name="cambio_pH" required>
+                        <option value="" disabled selected>Seleccione una opción</option>
+                        <option value="si">si</option>
+                        <option value="no">no</option>
+                    </select>
+
+                    <label>✏️ Ingrese esfuerzo inspiratorio #1 (cmH₂O):</label>
+                    <input type="number" name="esfuerzo1" id="esfuerzo1" step="0.1" required oninput="validarEsfuerzo('esfuerzo1')">
+
+                    <label>✏️ Ingrese esfuerzo inspiratorio #2 (cmH₂O):</label>
+                    <input type="number" name="esfuerzo2" id="esfuerzo2" step="0.1" required oninput="validarEsfuerzo('esfuerzo2')">
+
+                    <label>✏️ Ingrese esfuerzo inspiratorio #3 (cmH₂O):</label>
+                    <input type="number" name="esfuerzo3" id="esfuerzo3" step="0.1" required oninput="validarEsfuerzo('esfuerzo3')">
+
                     <button type="submit">Calcular</button>
                 </form>
             </div>
@@ -216,29 +274,54 @@ def formulario_html():
 @app.post("/procesar", response_class=HTMLResponse)
 async def procesar_formulario(request: Request):
     form = await request.form()
+    print("📥 Formulario recibido:", form)
     data = dict(form)
+    print("📥 Diccionario plano:", data)
 
     try:
+        # Validación de selects vacíos
+        campos_booleanos = [
+            "tiene_epoc", "tiene_asma", "hipercapnia",
+            "alteracion_hemodinamica", "cambio_pH"
+        ]
+        for campo in campos_booleanos:
+            if data.get(campo, "") not in ["si", "no"]:
+                raise ValueError(f"Campo clínico '{campo}' no fue respondido correctamente.")
+
         datos = {
-            "Ppeak": float(data.get("Ppeak", 0)),
-            "PEEP": float(data.get("PEEP", 0)),
-            "PS": float(data.get("PS", 0)),
-            "SatO2": float(data.get("SatO2", 0)),
-            "FiO2": float(data.get("FiO2", 0)),
-            "tiene_epoc": data.get("tiene_epoc", "no") == "si",
-            "tiene_asma": data.get("tiene_asma", "no") == "si",
-            "hipercapnia": data.get("hipercapnia", "no") == "si",
-            "alteracion_hemodinamica": data.get("alteracion_hemodinamica", "no") == "si",
-            "cambio_pH": data.get("cambio_pH", "no") == "si"
+            "Ppeak": float(data.get("Ppeak", "0") or "0"),
+            "PEEP": float(data.get("PEEP", "0") or "0"),
+            "PS": float(data.get("PS", "0") or "0"),
+            "SatO2": float(data.get("SatO2", "0") or "0"),
+            "FiO2": float(data.get("FiO2", "0") or "0"),
+            "tiene_epoc": data.get("tiene_epoc") == "si",
+            "tiene_asma": data.get("tiene_asma") == "si",
+            "hipercapnia": data.get("hipercapnia") == "si",
+            "alteracion_hemodinamica": data.get("alteracion_hemodinamica") == "si",
+            "cambio_pH": data.get("cambio_pH") == "si"
         }
 
         esfuerzos = [
-            float(data.get("esfuerzo1", 0)),
-            float(data.get("esfuerzo2", 0)),
-            float(data.get("esfuerzo3", 0))
+            float(data.get("esfuerzo1", "0") or "0"),
+            float(data.get("esfuerzo2", "0") or "0"),
+            float(data.get("esfuerzo3", "0") or "0")
         ]
 
+        # Validación de rango clínico
+        for i, e in enumerate(esfuerzos):
+            if not -5 <= e <= 5:
+                raise ValueError(f"Esfuerzo inspiratorio #{i+1} fuera de rango clínico (-5 a +5 cmH₂O).")
+
+        # Cálculo clínico
+        from ventilador import calcular_PDrop, calcular_ajuste
+
+        PDrop = calcular_PDrop(esfuerzos)
+        DPooc = datos["PEEP"] - PDrop
+        Pmus = 0.75 * DPooc
+        PTP = (datos["Ppeak"] - datos["PEEP"]) - (2.0 / 3.0) * DPooc
+
         resultado = calcular_ajuste(datos, esfuerzos)
+        logs_html = "".join(f"<li>{log}</li>" for log in resultado["logs"])
 
         html = f"""
         <html>
@@ -253,29 +336,65 @@ async def procesar_formulario(request: Request):
                         color: #333;
                     }}
                     .card {{
-                        background-color: white;
+                        background-color: rgba(173,243,228,0.42);
                         padding: 2em;
                         border-radius: 10px;
                         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-                        max-width: 500px;
+                        max-width: 600px;
                         margin: auto;
+                        animation: fadeIn 0.8s ease-in;
+                    }}
+                    @keyframes fadeIn {{
+                        from {{ opacity: 0; transform: translateY(20px); }}
+                        to {{ opacity: 1; transform: translateY(0); }}
                     }}
                     h2 {{
                         color: #007BFF;
                         margin-bottom: 1em;
                     }}
+                    h3 {{
+                        margin-top: 1.5em;
+                        color: #007BFF;
+                    }}
                     p {{
                         font-size: 1.1em;
                         margin: 0.5em 0;
+                    }}
+                    ul {{
+                        margin-top: 0.5em;
+                        padding-left: 1.2em;
+                    }}
+                    li {{
+                        margin-bottom: 0.4em;
+                    }}
+                    .summary {{
+                        margin-top: 1.5em;
+                        background-color: #ffffffaa;
+                        padding: 1em;
+                        border-radius: 8px;
+                        border-left: 4px solid #007BFF;
                     }}
                 </style>
             </head>
             <body>
                 <div class="card">
                     <h2>✅ Resultados Clínicos</h2>
-                    <p><strong>PS sugerida:</strong> {resultado['PS_sugerida']:.1f} cmH₂O</p>
-                    <p><strong>PEEP sugerida:</strong> {resultado['PEEP_sugerida']:.1f} cmH₂O</p>
-                    <p><strong>FiO₂ sugerida:</strong> {resultado['FiO2_sugerida']:.1f}%</p>
+
+                    <h3>📊 Parámetros Dinámicos:</h3>
+                    <p>• PDrop = {PDrop:.2f} cmH₂O</p>
+                    <p>• DPooc = {DPooc:.2f} cmH₂O</p>
+                    <p>• Pmus = {Pmus:.2f} cmH₂O</p>
+                    <p>• PTP dinámica = {PTP:.2f} cmH₂O</p>
+
+                    <h3>📋 Detalles del análisis:</h3>
+                    <ul>{logs_html}</ul>
+
+                    <div class="summary">
+                        <p><strong>✅ PROGRAMACIÓN SUGERIDA:</strong></p>
+                        <p>• PS&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= {resultado['PS_final']:.1f} cmH₂O</p>
+                        <p>• PEEP&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= {resultado['PEEP_final']:.1f} cmH₂O</p>
+                        <p>• FiO₂&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= {resultado['FiO2_sugerida']:.1f}%</p>
+                    </div>
                 </div>
             </body>
         </html>
@@ -284,8 +403,6 @@ async def procesar_formulario(request: Request):
 
     except Exception as e:
         return HTMLResponse(content=f"<p>Error: {e}</p>", status_code=400)
-
-
 
 
 

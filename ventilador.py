@@ -19,7 +19,7 @@ def calcular_ajuste(params, esfuerzos):
     Ppeak = params["Ppeak"]
     PEEP  = params["PEEP"]
     PS    = params["PS"]
-    Sat   = params["Sat"]
+    Sat   = params["SatO2"]
     FiO2  = params["FiO2"]
     
     epoc  = params["tiene_epoc"]

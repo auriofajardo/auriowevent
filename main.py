@@ -1,6 +1,8 @@
 from fastapi import FastAPI, Request
 import os, requests
 from ventilador import calcular_ajuste
+from fastapi.responses import RedirectResponse
+
 
 app = FastAPI()
 
@@ -61,7 +63,7 @@ async def telegram_webhook(request: Request):
 
     try:
         if step < 5:
-            key = ["Ppeak", "PEEP", "PS", "Sat", "FiO2"][step]
+            key = ["Ppeak", "PEEP", "PS", "SatO2", "FiO2"][step]
             d[key] = float(text)
 
         elif step < 10:
@@ -418,6 +420,9 @@ if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=port)
 
 
+@app.get("/", response_class=HTMLResponse)
+def redirigir_a_formulario():
+    return RedirectResponse(url="/formulario")
 
 
 

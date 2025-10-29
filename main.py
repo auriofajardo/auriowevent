@@ -3,6 +3,12 @@ import os, requests
 from ventilador import calcular_ajuste
 
 app = FastAPI()
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 SESS = {}
 
@@ -241,7 +247,6 @@ if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=port)
 
 
-@app.get("/health")
-def health_check():
-    return {"status": "ok"}
+
+
 

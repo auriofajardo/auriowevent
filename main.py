@@ -116,6 +116,181 @@ async def telegram_webhook(request: Request):
 
 
 
+from fastapi.responses import HTMLResponse
+
+@app.get("/formulario", response_class=HTMLResponse)
+def formulario_html():
+    html = """
+    <html>
+        <head>
+            <title>Formulario Ventilatorio</title>
+            <meta charset="UTF-8">
+            <style>
+                body {
+                    font-family: 'Segoe UI', sans-serif;
+                    background-color: #eef4f7;
+                    padding: 2em;
+                    color: #333;
+                }
+                .form-card {
+                    background-color: white;
+                    padding: 2em;
+                    border-radius: 10px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                    max-width: 600px;
+                    margin: auto;
+                }
+                h2 {
+                    color: #007BFF;
+                    margin-bottom: 1em;
+                }
+                label {
+                    display: block;
+                    margin-top: 1em;
+                    font-weight: bold;
+                }
+                input, select {
+                    width: 100%;
+                    padding: 0.5em;
+                    margin-top: 0.3em;
+                    border: 1px solid #ccc;
+                    border-radius: 5px;
+                }
+                button {
+                    margin-top: 2em;
+                    padding: 0.7em 1.5em;
+                    background-color: #007BFF;
+                    color: white;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                }
+                button:hover {
+                    background-color: #0056b3;
+                }
+            </style>
+            <script>
+                function validarEsfuerzo(id) {
+                    const input = document.getElementById(id);
+                    const val = parseFloat(input.value);
+                    if (val < -5 || val > 5) {
+                        input.style.borderColor = "red";
+                        input.setCustomValidity("Esfuerzo fuera de rango clínico (-5 a +5 cmH₂O)");
+                    } else {
+                        input.style.borderColor = "";
+                        input.setCustomValidity("");
+                    }
+                }
+            </script>
+        </head>
+        <body>
+            <div class="form-card">
+                <h2>🩺 Ingreso de Datos Clínicos</h2>
+                <form action="/procesar" method="post">
+                    <label>Ppeak:</label><input type="number" name="Ppeak" step="0.1" required>
+                    <label>PEEP:</label><input type="number" name="PEEP" step="0.1" required>
+                    <label>PS:</label><input type="number" name="PS" step="0.1" required>
+                    <label>SatO2:</label><input type="number" name="SatO2" step="0.1" required>
+                    <label>FiO2:</label><input type="number" name="FiO2" step="0.1" required>
+                    <label>EPOC:</label><select name="tiene_epoc"><option>si</option><option>no</option></select>
+                    <label>Asma:</label><select name="tiene_asma"><option>si</option><option>no</option></select>
+                    <label>Hipercapnia:</label><select name="hipercapnia"><option>si</option><option>no</option></select>
+                    <label>Hemodinámica:</label><select name="alteracion_hemodinamica"><option>si</option><option>no</option></select>
+                    <label>Cambio pH:</label><select name="cambio_pH"><option>si</option><option>no</option></select>
+                    <label>Esfuerzo 1:</label><input type="number" name="esfuerzo1" id="esfuerzo1" step="0.1" required oninput="validarEsfuerzo('esfuerzo1')">
+                    <label>Esfuerzo 2:</label><input type="number" name="esfuerzo2" id="esfuerzo2" step="0.1" required oninput="validarEsfuerzo('esfuerzo2')">
+                    <label>Esfuerzo 3:</label><input type="number" name="esfuerzo3" id="esfuerzo3" step="0.1" required oninput="validarEsfuerzo('esfuerzo3')">
+                    <button type="submit">Calcular</button>
+                </form>
+            </div>
+        </body>
+    </html>
+    """
+    return html
+
+
+
+
+
+
+@app.post("/procesar", response_class=HTMLResponse)
+async def procesar_formulario(request: Request):
+    form = await request.form()
+    data = dict(form)
+
+    try:
+        datos = {
+            "Ppeak": float(data.get("Ppeak", 0)),
+            "PEEP": float(data.get("PEEP", 0)),
+            "PS": float(data.get("PS", 0)),
+            "SatO2": float(data.get("SatO2", 0)),
+            "FiO2": float(data.get("FiO2", 0)),
+            "tiene_epoc": data.get("tiene_epoc", "no") == "si",
+            "tiene_asma": data.get("tiene_asma", "no") == "si",
+            "hipercapnia": data.get("hipercapnia", "no") == "si",
+            "alteracion_hemodinamica": data.get("alteracion_hemodinamica", "no") == "si",
+            "cambio_pH": data.get("cambio_pH", "no") == "si"
+        }
+
+        esfuerzos = [
+            float(data.get("esfuerzo1", 0)),
+            float(data.get("esfuerzo2", 0)),
+            float(data.get("esfuerzo3", 0))
+        ]
+
+        resultado = calcular_ajuste(datos, esfuerzos)
+
+        html = f"""
+        <html>
+            <head>
+                <title>Resultados Clínicos</title>
+                <meta charset="UTF-8">
+                <style>
+                    body {{
+                        font-family: 'Segoe UI', sans-serif;
+                        background-color: #f0f4f8;
+                        padding: 2em;
+                        color: #333;
+                    }}
+                    .card {{
+                        background-color: white;
+                        padding: 2em;
+                        border-radius: 10px;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                        max-width: 500px;
+                        margin: auto;
+                    }}
+                    h2 {{
+                        color: #007BFF;
+                        margin-bottom: 1em;
+                    }}
+                    p {{
+                        font-size: 1.1em;
+                        margin: 0.5em 0;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <h2>✅ Resultados Clínicos</h2>
+                    <p><strong>PS sugerida:</strong> {resultado['PS_sugerida']:.1f} cmH₂O</p>
+                    <p><strong>PEEP sugerida:</strong> {resultado['PEEP_sugerida']:.1f} cmH₂O</p>
+                    <p><strong>FiO₂ sugerida:</strong> {resultado['FiO2_sugerida']:.1f}%</p>
+                </div>
+            </body>
+        </html>
+        """
+        return HTMLResponse(content=html)
+
+    except Exception as e:
+        return HTMLResponse(content=f"<p>Error: {e}</p>", status_code=400)
+
+
+
+
+
+
+
 
 
 from fastapi.responses import HTMLResponse
